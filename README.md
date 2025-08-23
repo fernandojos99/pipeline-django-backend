@@ -9,7 +9,6 @@ python3 -m venv mi_entorno
 ```
 
 ### 2. Activar el entorno virtual
-Dentro de la carpeta mi_entorno y de bin:
 ```bash
 source mi_entorno/bin/activate 
 ```

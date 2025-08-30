@@ -2,8 +2,8 @@ from django.shortcuts import render
 
 # views.py
 from rest_framework import viewsets
-from minibackend.models import Usuario
-from .serializers import * 
+from minibackend.models import Usuario, Lista, Articulo
+from .serializers import *
 
 # views.py
 from rest_framework.decorators import action
@@ -33,10 +33,10 @@ class UsuarioViewSet(viewsets.ModelViewSet):
 # Si especifico  el usuario 
 #
 # ## Esto regresa todas las listas existentes
-# class ListaViewSet(viewsets.ModelViewSet):
-#     queryset = Lista.objects.all()
-#     serializer_class = ListaSerializer
+class ListaViewSet(viewsets.ModelViewSet):
+    queryset = Lista.objects.all()
+    serializer_class = ListaSerializer
 
-# class ArticuloViewSet(viewsets.ModelViewSet):
-#     queryset = Articulo.objects.all()
-#     serializer_class = ArticuloSerializer
+class ArticuloViewSet(viewsets.ModelViewSet):
+    queryset = Articulo.objects.all()
+    serializer_class = ArticuloSerializer

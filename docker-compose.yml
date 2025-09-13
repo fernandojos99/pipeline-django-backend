@@ -5,7 +5,7 @@ services:
     image: ghcr.io/fernandojos99/backend-django:1.0.0
     container_name: backend-django
     ports:
-      - "8003:8000"      # Mapea el puerto 8000 del contenedor al 8000 de tu máquina
+      - "8000:8000"      # Mapea el puerto 8000 del contenedor al 8000 de tu máquina
     environment:
       - DEBUG=1
     restart: unless-stopped

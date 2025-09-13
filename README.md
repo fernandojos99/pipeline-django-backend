@@ -50,3 +50,17 @@ Si necesitas agregar otros orígenes, modifica `CORS_ALLOWED_ORIGINS` en `settin
 ## Hacer request 
 
 Para que sea más fácil pueden importar el archivo `CRUDDjango-Rest.postman_collection.json` en Postman para que les salgan ejemplos de peticiones.
+
+
+## docker-compose 
+Utilizar la siguiente instruccion para compilar y ejecutar todo el proyecto tanto frontend como backend 
+
+```
+docker-compose up
+
+```
+Para detenerlo 
+```
+docker-compose down
+
+```

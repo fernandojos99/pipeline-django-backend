@@ -1,0 +1,30 @@
+# Archivos de Git
+.git
+.gitignore
+
+# Entorno virtual
+venv/
+env/
+
+# Archivos de Python compilados
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Logs
+*.log
+
+# Archivos locales de IDE
+*.swp
+.idea/
+.vscode/
+
+# Archivos de sistema
+.DS_Store
+
+# Archivos sensibles
+.env
+
+# Node modules (si tienes frontend)
+node_modules/

@@ -1,0 +1,20 @@
+FROM python:3.11-slim
+
+WORKDIR /app
+
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+COPY . .
+
+# Instalar supervisor
+RUN apt-get update && apt-get install -y supervisor
+
+# Copiar configuración
+COPY supervisord.conf /etc/supervisor/conf.d/supervisord.conf
+
+EXPOSE 8000
+
+
+# Ejecutar supervisor en lugar de Gunicorn directo
+CMD ["supervisord", "-c", "/etc/supervisor/conf.d/supervisord.conf"]

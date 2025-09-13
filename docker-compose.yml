@@ -9,3 +9,12 @@ services:
     environment:
       - DEBUG=1
     restart: unless-stopped
+
+  frontend:
+    image: ghcr.io/fernandojos99/frontend:latest
+    container_name: frontend-react
+    ports:
+      - "3000:3000"  # Mapea el puerto 3000 del contenedor al 3000 de tu máquina
+    depends_on:
+      - backend   # Se asegura que el backend esté levantado primero
+    restart: unless-stopped

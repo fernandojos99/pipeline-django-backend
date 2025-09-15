@@ -2,19 +2,29 @@ version: "3.9"
 
 services:
   backend:
-    image: ghcr.io/fernandojos99/backend-django:1.0.0
+    build:
+      context: ./
+      dockerfile: Dockerfile
     container_name: backend-django
+    env_file:
+      - .env
     ports:
-      - "8000:8000"      # Mapea el puerto 8000 del contenedor al 8000 de tu máquina
+      - "${BACKEND_PORT}:8000" # Mapea el puerto 8000 del contenedor al 8000 de tu máquina
     environment:
       - DEBUG=1
     restart: unless-stopped
 
   frontend:
-    image: ghcr.io/fernandojos99/frontend:latest
+    build:
+      context: ./../frontend
+      dockerfile: Dockerfile
     container_name: frontend-react
+    env_file:
+      - .env
+    environment:
+      REACT_APP_API_BASE_URL: ${REACT_APP_API_BASE_URL}
     ports:
-      - "3000:3000"  # Mapea el puerto 3000 del contenedor al 3000 de tu máquina
+      - "${FRONTEND_PORT}:3000" # Mapea el puerto 3000 del contenedor al 3000 de tu máquina
     depends_on:
-      - backend   # Se asegura que el backend esté levantado primero
+      - backend # Se asegura que el backend esté levantado primero
     restart: unless-stopped

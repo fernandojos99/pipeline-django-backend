@@ -1,3 +1,9 @@
+# Esta rama solo es de pruebas para pipeline CI/CD  
+## no tomar en cuenta 
+
+Le coloque 6 pruebas unitarias con pytest  
+
+
 # Django-rest
 Es un minibackend para entender el funcionamiento de despliegues
 

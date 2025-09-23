@@ -54,5 +54,5 @@ jobs:
 
       - name: Push Docker image
         run: |
-          docker push ghcr.io/${{ github.repository }}/backend-django:${{ env.VERSION }}
+          docker push ghcr.io/${{REPO_LOWER}}/backend-django:${{ env.VERSION }}
 

@@ -49,7 +49,7 @@ jobs:
 
       - name: Build Docker image
         run: |
-          docker build -t ghcr.io/${{ github.repository }}/backend-django:${{ env.VERSION }} .
+          docker build -t ghcr.io/${{ github.repository && github.repository.toLowerCase() }}/backend-django:${{ env.VERSION }} .
 
       - name: Push Docker image
         run: |

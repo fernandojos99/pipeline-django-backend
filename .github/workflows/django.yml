@@ -2,9 +2,9 @@ name: Django CI
 
 on:
   push:
-    branches: [ "pipelineFer" ]
+    branches: [ "fix/docker-deployment-improvements" ]
   pull_request:
-    branches: [ "pipelineFer" ]
+    branches: [ "fix/docker-deployment-improvements" ]
 
 jobs:
   test:

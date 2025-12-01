@@ -49,9 +49,10 @@ jobs:
 
       - name: Build Docker image
         run: |
-          docker build -t ghcr.io/${{ github.repository }}/backend-django:${{ env.VERSION }} .
+          REPO_LOWER=$(echo "${GITHUB_REPOSITORY}" | tr '[:upper:]' '[:lower:]')
+          docker build -t ghcr.io/${REPO_LOWER}/backend-django:${{ env.VERSION }} .
 
       - name: Push Docker image
         run: |
-          docker push ghcr.io/${{ github.repository }}/backend-django:${{ env.VERSION }}
-
+          REPO_LOWER=$(echo "${GITHUB_REPOSITORY}" | tr '[:upper:]' '[:lower:]')
+          docker push ghcr.io/${REPO_LOWER}/backend-django:${{ env.VERSION }}

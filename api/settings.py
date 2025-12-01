@@ -103,6 +103,15 @@ DATABASES = {
 }
 
 
+# Esto se hace para que el pipeline funcione porque los jobs no tienen variables de entorno
+#(amenos que se las ponga )
+if os.getenv("GITHUB_ACTIONS") == "true":
+    DATABASES = {
+        "default": {
+            "ENGINE": "django.db.backends.sqlite3",
+            "NAME": ":memory:",
+        }
+    }
 
 
 # Password validation

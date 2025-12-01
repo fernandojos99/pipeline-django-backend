@@ -2,7 +2,7 @@
 
 services:
   backend:
-    image: practica4backend:1.0.0
+    image: practica4backend:2.0.0
     build:
       context: ./
       dockerfile: Dockerfile

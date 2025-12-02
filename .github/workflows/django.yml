@@ -124,6 +124,11 @@ jobs:
             else
               echo "No había imágenes previas"
             fi
+            echo "DEBUG - VERSION='${VERSION}'"
+            echo "DEBUG - IMAGE='${IMAGE}'"
+            echo "DEBUG - ECR_REPO='${ECR_REPO}'"
+
+            
             echo "Descargando nueva imagen..."
             docker pull 586017285275.dkr.ecr.us-east-1.amazonaws.com/mi-app-repo:$VERSION
 

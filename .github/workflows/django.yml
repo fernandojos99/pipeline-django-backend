@@ -109,6 +109,9 @@ jobs:
           # Nota para que el logueo en amazon sea correcto la instancia debe tener politicas asociadas
           #  | docker login --username AWS --password-stdin <ID>.dkr.ecr.us-east-1.amazonaws.com
           script: |
+            VERSION="${{ needs.build-and-push.outputs.VERSION }}"
+            ECR_REGISTRY="${{ secrets.AWS_ECR_REGISTRY }}"
+            ECR_REPO="mi-app-repo"
             echo "Logeando en ECR desde la máquina..."
             aws ecr get-login-password --region us-east-1 \
               | docker login --username AWS --password-stdin 586017285275.dkr.ecr.us-east-1.amazonaws.com

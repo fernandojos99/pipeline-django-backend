@@ -103,10 +103,10 @@ jobs:
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SERVER_SSH_KEY }}
           # Nota para que el logueo en amazon sea correcto la instancia debe tener politicas asociadas
+          #  | docker login --username AWS --password-stdin <ID>.dkr.ecr.us-east-1.amazonaws.com
           script: |
             echo "Logeando en ECR desde la máquina..."
             aws ecr get-login-password --region us-east-1 \
-            #  | docker login --username AWS --password-stdin <ID>.dkr.ecr.us-east-1.amazonaws.com
               | docker login --username AWS --password-stdin 586017285275.dkr.ecr.us-east-1.amazonaws.com
             
             echo "Deteniendo contenedor actual..."

@@ -33,6 +33,8 @@ jobs:
   build-and-push:
     runs-on: ubuntu-latest
     needs: tests   # 👈 asegura que solo corre si 'tests' fue exitoso
+    outputs:
+      VERSION: ${{ steps.vars.outputs.VERSION }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
@@ -58,7 +60,9 @@ jobs:
 
       - name: Extract version
         id: vars
-        run: echo "VERSION=2.0.${{ github.run_number }}" >> $GITHUB_ENV
+        run: |
+          echo "VERSION=2.0.${{ github.run_number }}" >> $GITHUB_ENV
+          echo "VERSION=2.0.${{ github.run_number }}" >> $GITHUB_OUTPUT
 
       # - name: Build Docker image
       #   run: |

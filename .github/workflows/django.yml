@@ -19,7 +19,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up Python ${{ matrix.python-version }}
+      - name: Set up Python
         uses: actions/setup-python@v3
         with:
           python-version: ${{ matrix.python-version }}
@@ -68,11 +68,11 @@ jobs:
           docker build -t $ECR_REPOSITORY:${{ steps.vars.outputs.VERSION }} .
           docker tag $ECR_REPOSITORY:${{ steps.vars.outputs.VERSION }} \
             $ECR_REGISTRY/$ECR_REPOSITORY:${{ steps.vars.outputs.VERSION }}
-          
+
           docker push $ECR_REGISTRY/$ECR_REPOSITORY:${{ steps.vars.outputs.VERSION }}
 
       - name: Print Image URI
-        run: echo "IMAGE URI:${{ steps.login-ecr.outputs.registry }}/mi-app-repo:${{ steps.vars.outputs.VERSION }}"
+        run: echo "IMAGE URI: ${{ steps.login-ecr.outputs.registry }}/mi-app-repo:${{ steps.vars.outputs.VERSION }}"
 
 
   deploy:
@@ -96,26 +96,27 @@ jobs:
             ECR_REGISTRY="${{ needs.build-and-push.outputs.ECR_REGISTRY }}"
             ECR_REPO="mi-app-repo"
 
-            echo "Estas son las variables que lee:"
             echo "VERSION: $VERSION"
             echo "ECR_REPO: $ECR_REPO"
             echo "ECR_REGISTRY: $ECR_REGISTRY"
 
-            if [ -z "$VERSION" ]; then
-              echo "ERROR: VERSION está vacío"
+            if [ -z "$VERSION" ] || [ -z "$ECR_REGISTRY" ]; then
+              echo "ERROR: VERSION o ECR_REGISTRY está vacío"
               exit 1
             fi
 
             echo "Logeando en ECR..."
             aws ecr get-login-password --region us-east-1 | docker login \
-            --username AWS --password-stdin 586017285275.dkr.ecr.us-east-1.amazonaws.com
+              --username AWS --password-stdin "$ECR_REGISTRY"
 
             echo "Deteniendo contenedor anterior..."
             docker stop mi-app-repo || true
             docker rm mi-app-repo || true
 
             echo "Eliminando imágenes viejas..."
-            docker images --format "{{.Repository}}:{{.Tag}}" | grep "^$ECR_REGISTRY" | xargs -r docker rmi
+            docker images --format "{{.Repository}}:{{.Tag}}" \
+              | grep "^$ECR_REGISTRY" \
+              | xargs -r docker rmi || true
 
             echo "Descargando nueva imagen..."
             docker pull "$ECR_REGISTRY/$ECR_REPO:$VERSION"

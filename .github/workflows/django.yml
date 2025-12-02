@@ -84,3 +84,42 @@ jobs:
 
       - name: Print Image URI
         run: echo "IMAGE URI:${{ steps.login-ecr.outputs.registry }}/mi-app-repo:${{ env.VERSION }}"
+
+  # Lo siguiente es para comunicarnos con la instancia de EC2 que tiene al servidor y subir o actualizar la imagen 
+  # para levantar el servicio de backend con las ultimas actualizaciones.  
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Deploy to server via SSH
+        uses: appleboy/ssh-action@v0.1.10
+        env:
+            VERSION: ${{ env.VERSION }}
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SERVER_SSH_KEY }}
+          # Nota para que el logueo en amazon sea correcto la instancia debe tener politicas asociadas
+          script: |
+            echo "Logeando en ECR desde la máquina..."
+            aws ecr get-login-password --region us-east-1 \
+            #  | docker login --username AWS --password-stdin <ID>.dkr.ecr.us-east-1.amazonaws.com
+              | docker login --username AWS --password-stdin 586017285275.dkr.ecr.us-east-1.amazonaws.com
+            
+            echo "Deteniendo contenedor actual..."
+            docker ps -q --filter "name=mi-app-repo" | grep -q . && docker stop mi-app-repo && docker rm mi-app-repo || echo "No había contenedor"
+            # Borrar imagen si existe
+            if docker images -q 586017285275.dkr.ecr.us-east-1.amazonaws.com/mi-app-repo:$VERSION | grep -q .; then
+              echo "Eliminando imagen anterior..."
+              docker rmi 586017285275.dkr.ecr.us-east-1.amazonaws.com/mi-app-repo:$VERSION
+            else
+              echo "No había imagen previa"
+            fi
+            echo "Descargando nueva imagen..."
+            docker pull 586017285275.dkr.ecr.us-east-1.amazonaws.com/mi-app-repo:$VERSION
+
+            echo "Levantando contenedor..."
+            docker run -d --name mi-app-repo -p 80:80 586017285275.dkr.ecr.us-east-1.amazonaws.com/mi-app-repo:$VERSION

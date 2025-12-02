@@ -58,7 +58,7 @@ jobs:
 
       - name: Extract version
         id: vars
-        run: echo "VERSION=2.0.${{ github.run_number }}" >> $GITHUB_OUTPUT
+        run: echo "VERSION=2.0.${{ github.run_number }}" >> "$GITHUB_OUTPUT"
 
       - name: Build, tag and push image
         env:
@@ -89,24 +89,16 @@ jobs:
           host: ${{ secrets.SERVER_HOST }}
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SERVER_SSH_KEY }}
-          #ECR_REGISTRY="${{ secrets.AWS_ECR_REGISTRY }}"
+
           script: |
             VERSION="${{ needs.build-and-push.outputs.VERSION }}"
-            
-            ECR_REGISTRY="${{ needs.build-and-push.outputs.REGISTRY }}"
-            
+            ECR_REGISTRY="${{ needs.build-and-push.outputs.ECR_REGISTRY }}"
             ECR_REPO="mi-app-repo"
-            
-            echo "Estas son las variables que lee"
-            
-            echo $VERSION
-            
-            echo $ECR_REPO
-            
-            echo $ECR_REGISTRY
 
-            
-            echo "Using VERSION: $VERSION"
+            echo "Estas son las variables que lee:"
+            echo "VERSION: $VERSION"
+            echo "ECR_REPO: $ECR_REPO"
+            echo "ECR_REGISTRY: $ECR_REGISTRY"
 
             if [ -z "$VERSION" ]; then
               echo "ERROR: VERSION está vacío"
@@ -125,9 +117,9 @@ jobs:
             docker images --format "{{.Repository}}:{{.Tag}}" | grep "^$ECR_REGISTRY" | xargs -r docker rmi
 
             echo "Descargando nueva imagen..."
-            docker pull $ECR_REGISTRY/$ECR_REPO:$VERSION
+            docker pull "$ECR_REGISTRY/$ECR_REPO:$VERSION"
 
             echo "Levantando contenedor..."
-            docker run -d --name mi-app-repo -p 80:80 $ECR_REGISTRY/$ECR_REPO:$VERSION
+            docker run -d --name mi-app-repo -p 80:80 "$ECR_REGISTRY/$ECR_REPO:$VERSION"
 
             echo "Deploy completado correctamente."

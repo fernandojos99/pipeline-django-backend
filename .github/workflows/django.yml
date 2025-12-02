@@ -111,12 +111,14 @@ jobs:
             
             echo "Deteniendo contenedor actual..."
             docker ps -q --filter "name=mi-app-repo" | grep -q . && docker stop mi-app-repo && docker rm mi-app-repo || echo "No había contenedor"
+            
             # Borrar imagen si existe
-            if docker images -q 586017285275.dkr.ecr.us-east-1.amazonaws.com/mi-app-repo:$VERSION | grep -q .; then
-              echo "Eliminando imagen anterior..."
-              docker rmi 586017285275.dkr.ecr.us-east-1.amazonaws.com/mi-app-repo:$VERSION
+            IMAGES_TO_DELETE=$(docker images --format "{{.Repository}}:{{.Tag}}" | grep "^586017285275")
+            if [ -n "$IMAGES_TO_DELETE" ]; then
+              echo "Eliminando imágenes que coinciden con 586017285275..."
+              echo "$IMAGES_TO_DELETE" | xargs -r docker rmi
             else
-              echo "No había imagen previa"
+              echo "No había imágenes previas"
             fi
             echo "Descargando nueva imagen..."
             docker pull 586017285275.dkr.ecr.us-east-1.amazonaws.com/mi-app-repo:$VERSION

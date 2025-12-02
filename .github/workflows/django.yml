@@ -8,21 +8,18 @@ on:
 
 jobs:
 
-  tests:
+  ci-build-deploy:
     runs-on: ubuntu-latest
 
-    strategy:
-      max-parallel: 4
-      matrix:
-        python-version: ["3.12"]
-
     steps:
-      - uses: actions/checkout@v4
+      # ---------------- TESTS ----------------
+      - name: Checkout code
+        uses: actions/checkout@v4
 
       - name: Set up Python
         uses: actions/setup-python@v3
         with:
-          python-version: ${{ matrix.python-version }}
+          python-version: "3.12"
 
       - name: Install Dependencies
         run: |
@@ -32,19 +29,7 @@ jobs:
       - name: Run Tests
         run: pytest
 
-
-  build-and-push:
-    runs-on: ubuntu-latest
-    needs: tests
-
-    outputs:
-      VERSION: ${{ steps.vars.outputs.VERSION }}
-      ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
+      # ---------------- AWS LOGIN ----------------
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
@@ -56,34 +41,29 @@ jobs:
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v2
 
-      - name: Extract version
+      # ---------------- VERSION ----------------
+      - name: Generate version
         id: vars
         run: echo "VERSION=2.0.${{ github.run_number }}" >> "$GITHUB_OUTPUT"
 
-      - name: Build, tag and push image
+      # ---------------- BUILD & PUSH ----------------
+      - name: Build and Push Image
         env:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
           ECR_REPOSITORY: mi-app-repo
+          VERSION: ${{ steps.vars.outputs.VERSION }}
         run: |
-          docker build -t $ECR_REPOSITORY:${{ steps.vars.outputs.VERSION }} .
-          docker tag $ECR_REPOSITORY:${{ steps.vars.outputs.VERSION }} \
-            $ECR_REGISTRY/$ECR_REPOSITORY:${{ steps.vars.outputs.VERSION }}
+          echo "Building image: $ECR_REPOSITORY:$VERSION"
 
-          docker push $ECR_REGISTRY/$ECR_REPOSITORY:${{ steps.vars.outputs.VERSION }}
+          docker build -t $ECR_REPOSITORY:$VERSION .
+          docker tag $ECR_REPOSITORY:$VERSION $ECR_REGISTRY/$ECR_REPOSITORY:$VERSION
 
-      - name: Print Image URI
-        run: echo "IMAGE URI: ${{ steps.login-ecr.outputs.registry }}/mi-app-repo:${{ steps.vars.outputs.VERSION }}"
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$VERSION
 
+          echo "Image pushed: $ECR_REGISTRY/$ECR_REPOSITORY:$VERSION"
 
-  deploy:
-    runs-on: ubuntu-latest
-    needs: build-and-push
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Deploy to server via SSH
+      # ---------------- DEPLOY ----------------
+      - name: Deploy to server
         uses: appleboy/ssh-action@v0.1.10
         with:
           host: ${{ secrets.SERVER_HOST }}
@@ -92,36 +72,34 @@ jobs:
           debug: true
 
           script: |
-            VERSION="${{ needs.build-and-push.outputs.VERSION }}"
-            ECR_REGISTRY="${{ needs.build-and-push.outputs.ECR_REGISTRY }}"
+            VERSION="${{ steps.vars.outputs.VERSION }}"
+            ECR_REGISTRY="${{ steps.login-ecr.outputs.registry }}"
             ECR_REPO="mi-app-repo"
 
-            echo "VERSION: $VERSION"
-            echo "ECR_REPO: $ECR_REPO"
-            echo "ECR_REGISTRY: $ECR_REGISTRY"
+            echo "Deploying version $VERSION"
 
             if [ -z "$VERSION" ] || [ -z "$ECR_REGISTRY" ]; then
-              echo "ERROR: VERSION o ECR_REGISTRY está vacío"
+              echo "ERROR: VERSION o ECR_REGISTRY vacío"
               exit 1
             fi
 
-            echo "Logeando en ECR..."
+            echo "Logging into ECR..."
             aws ecr get-login-password --region us-east-1 | docker login \
               --username AWS --password-stdin "$ECR_REGISTRY"
 
-            echo "Deteniendo contenedor anterior..."
+            echo "Stopping old container..."
             docker stop mi-app-repo || true
             docker rm mi-app-repo || true
 
-            echo "Eliminando imágenes viejas..."
+            echo "Cleaning old images..."
             docker images --format "{{.Repository}}:{{.Tag}}" \
               | grep "^$ECR_REGISTRY" \
               | xargs -r docker rmi || true
 
-            echo "Descargando nueva imagen..."
+            echo "Pulling new image..."
             docker pull "$ECR_REGISTRY/$ECR_REPO:$VERSION"
 
-            echo "Levantando contenedor..."
+            echo "Starting container..."
             docker run -d --name mi-app-repo -p 80:80 "$ECR_REGISTRY/$ECR_REPO:$VERSION"
 
-            echo "Deploy completado correctamente."
+            echo "Deployment complete."

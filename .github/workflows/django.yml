@@ -1,4 +1,4 @@
-name: Django CI
+name: Django CI & Deployment
 
 on:
   push:
@@ -6,47 +6,44 @@ on:
   pull_request:
     branches: [ "fix/docker-deployment-improvements" ]
 
-
 jobs:
-  tests:
 
+  tests:
     runs-on: ubuntu-latest
+
     strategy:
       max-parallel: 4
       matrix:
         python-version: ["3.12"]
 
     steps:
-    - uses: actions/checkout@v4
-    - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v3
-      with:
-        python-version: ${{ matrix.python-version }}
-    - name: Install Dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install -r requirements.txt
-    - name: Run Tests
-      run: |
-        pytest
+      - uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v3
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run Tests
+        run: pytest
+
 
   build-and-push:
     runs-on: ubuntu-latest
-    needs: tests   # 👈 asegura que solo corre si 'tests' fue exitoso
+    needs: tests
+
     outputs:
       VERSION: ${{ steps.vars.outputs.VERSION }}
+
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
-      - name: Log in to GitHub Container Registry
-        uses: docker/login-action@v2
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.token1 }}
-
-            # 1. Configurar credenciales de AWS
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
@@ -60,39 +57,26 @@ jobs:
 
       - name: Extract version
         id: vars
-        run: |
-          echo "VERSION=2.0.${{ github.run_number }}" >> $GITHUB_ENV
-          echo "VERSION=2.0.${{ github.run_number }}" >> $GITHUB_OUTPUT
+        run: echo "VERSION=2.0.${{ github.run_number }}" >> $GITHUB_OUTPUT
 
-      # - name: Build Docker image
-      #   run: |
-      #     REPO_LOWER=$(echo "${GITHUB_REPOSITORY}" | tr '[:upper:]' '[:lower:]')
-      #     docker build -t ghcr.io/${REPO_LOWER}/backend-django:${{ env.VERSION }} .
-
-      # - name: Push Docker image
-      #   run: |
-      #     REPO_LOWER=$(echo "${GITHUB_REPOSITORY}" | tr '[:upper:]' '[:lower:]')
-      #     docker push ghcr.io/${REPO_LOWER}/backend-django:${{ env.VERSION }}
-
-          
-       # 3. Construir y subir la imagen
-      - name: Build, tag, and push image
+      - name: Build, tag and push image
         env:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
           ECR_REPOSITORY: mi-app-repo
-          #IMAGE_TAG: latest
         run: |
-          docker build -t $ECR_REPOSITORY:${{ env.VERSION }} .
-          docker tag $ECR_REPOSITORY:${{ env.VERSION }} $ECR_REGISTRY/$ECR_REPOSITORY:${{ env.VERSION }}
-          docker push $ECR_REGISTRY/$ECR_REPOSITORY:${{ env.VERSION }}
+          docker build -t $ECR_REPOSITORY:${{ steps.vars.outputs.VERSION }} .
+          docker tag $ECR_REPOSITORY:${{ steps.vars.outputs.VERSION }} \
+            $ECR_REGISTRY/$ECR_REPOSITORY:${{ steps.vars.outputs.VERSION }}
+          
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:${{ steps.vars.outputs.VERSION }}
 
       - name: Print Image URI
-        run: echo "IMAGE URI:${{ steps.login-ecr.outputs.registry }}/mi-app-repo:${{ env.VERSION }}"
+        run: echo "IMAGE URI:${{ steps.login-ecr.outputs.registry }}/mi-app-repo:${{ steps.vars.outputs.VERSION }}"
 
-  # Lo siguiente es para comunicarnos con la instancia de EC2 que tiene al servidor y subir o actualizar la imagen 
-  # para levantar el servicio de backend con las ultimas actualizaciones.  
+
   deploy:
     runs-on: ubuntu-latest
+    needs: build-and-push
 
     steps:
       - name: Checkout
@@ -100,40 +84,37 @@ jobs:
 
       - name: Deploy to server via SSH
         uses: appleboy/ssh-action@v0.1.10
-        env:
-            VERSION: ${{ env.VERSION }}
         with:
           host: ${{ secrets.SERVER_HOST }}
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SERVER_SSH_KEY }}
-          # Nota para que el logueo en amazon sea correcto la instancia debe tener politicas asociadas
-          #  | docker login --username AWS --password-stdin <ID>.dkr.ecr.us-east-1.amazonaws.com
           script: |
             VERSION="${{ needs.build-and-push.outputs.VERSION }}"
             ECR_REGISTRY="${{ secrets.AWS_ECR_REGISTRY }}"
             ECR_REPO="mi-app-repo"
-            echo "Logeando en ECR desde la máquina..."
-            aws ecr get-login-password --region us-east-1 \
-              | docker login --username AWS --password-stdin 586017285275.dkr.ecr.us-east-1.amazonaws.com
-            
-            echo "Deteniendo contenedor actual..."
-            docker ps -q --filter "name=mi-app-repo" | grep -q . && docker stop mi-app-repo && docker rm mi-app-repo || echo "No había contenedor"
-            
-            # Borrar imagen si existe
-            IMAGES_TO_DELETE=$(docker images --format "{{.Repository}}:{{.Tag}}" | grep "^586017285275")
-            if [ -n "$IMAGES_TO_DELETE" ]; then
-              echo "Eliminando imágenes que coinciden con 586017285275..."
-              echo "$IMAGES_TO_DELETE" | xargs -r docker rmi
-            else
-              echo "No había imágenes previas"
-            fi
-            echo "DEBUG - VERSION='${VERSION}'"
-            echo "DEBUG - IMAGE='${IMAGE}'"
-            echo "DEBUG - ECR_REPO='${ECR_REPO}'"
 
-            
+            echo "Using VERSION: $VERSION"
+
+            if [ -z "$VERSION" ]; then
+              echo "ERROR: VERSION está vacío"
+              exit 1
+            fi
+
+            echo "Logeando en ECR..."
+            aws ecr get-login-password --region us-east-1 \
+              | docker login --username AWS --password-stdin $ECR_REGISTRY
+
+            echo "Deteniendo contenedor anterior..."
+            docker stop mi-app-repo || true
+            docker rm mi-app-repo || true
+
+            echo "Eliminando imágenes viejas..."
+            docker images --format "{{.Repository}}:{{.Tag}}" | grep "^$ECR_REGISTRY" | xargs -r docker rmi
+
             echo "Descargando nueva imagen..."
-            docker pull 586017285275.dkr.ecr.us-east-1.amazonaws.com/mi-app-repo:$VERSION
+            docker pull $ECR_REGISTRY/$ECR_REPO:$VERSION
 
             echo "Levantando contenedor..."
-            docker run -d --name mi-app-repo -p 80:80 586017285275.dkr.ecr.us-east-1.amazonaws.com/mi-app-repo:$VERSION
+            docker run -d --name mi-app-repo -p 80:80 $ECR_REGISTRY/$ECR_REPO:$VERSION
+
+            echo "Deploy completado correctamente."

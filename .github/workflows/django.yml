@@ -39,6 +39,7 @@ jobs:
 
     outputs:
       VERSION: ${{ steps.vars.outputs.VERSION }}
+      ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
 
     steps:
       - name: Checkout code

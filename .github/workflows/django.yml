@@ -92,11 +92,17 @@ jobs:
           #ECR_REGISTRY="${{ secrets.AWS_ECR_REGISTRY }}"
           script: |
             VERSION="${{ needs.build-and-push.outputs.VERSION }}"
+            
             ECR_REGISTRY="${{ needs.build-and-push.outputs.REGISTRY }}"
+            
             ECR_REPO="mi-app-repo"
+            
             echo "Estas son las variables que lee"
+            
             echo $VERSION
+            
             echo $ECR_REPO
+            
             echo $ECR_REGISTRY
 
             

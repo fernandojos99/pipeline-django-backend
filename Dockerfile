@@ -38,5 +38,11 @@ COPY supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 # Exponer puerto (para Gunicorn)
 EXPOSE 8000
 
+# Copiar entrypoint
+COPY entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+
+ENTRYPOINT ["/entrypoint.sh"]
+
 # Ejecutar supervisord
 CMD ["supervisord", "-c", "/etc/supervisor/conf.d/supervisord.conf"]

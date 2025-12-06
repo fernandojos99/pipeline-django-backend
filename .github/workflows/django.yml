@@ -62,6 +62,7 @@ jobs:
 
           echo "Image pushed: $ECR_REGISTRY/$ECR_REPOSITORY:$VERSION"
 
+          
       # ---------------- DEPLOY ----------------
       - name: Deploy to server
         uses: appleboy/ssh-action@v0.1.10
@@ -71,6 +72,8 @@ jobs:
           key: ${{ secrets.SERVER_SSH_KEY }}
           debug: true
 
+
+              
           script: |
             VERSION="${{ steps.vars.outputs.VERSION }}"
             ECR_REGISTRY="${{ steps.login-ecr.outputs.registry }}"
@@ -100,6 +103,14 @@ jobs:
             docker pull "$ECR_REGISTRY/$ECR_REPO:$VERSION"
 
             echo "Starting container..."
-            docker run -d --name mi-app-repo -p 80:80 "$ECR_REGISTRY/$ECR_REPO:$VERSION"
-
+            docker run -d \
+              --name mi-app-repo \
+              -p 8000:8000 \
+              -e DB_NAME='${{ secrets.DB_NAME }}' \
+              -e DB_USER='${{ secrets.DB_USER }}' \
+              -e DB_PASSWORD='${{ secrets.DB_PASSWORD }}' \
+              -e DB_HOST='${{ secrets.DB_HOST }}' \
+              -e DB_PORT='${{ secrets.DB_PORT }}' \
+              
+              "$ECR_REGISTRY/$ECR_REPO:$VERSION"
             echo "Deployment complete."

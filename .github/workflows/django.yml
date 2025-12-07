@@ -106,7 +106,7 @@ jobs:
             docker run -d \
               --name mi-app-repo \
               -p 8000:8000 \
-              -e LOAD_FIXTURES=true \
+              -e LOAD_FIXTURES=false \
               -e DB_NAME='${{ secrets.DB_NAME }}' \
               -e DB_USER='${{ secrets.DB_USER }}' \
               -e DB_PASSWORD='${{ secrets.DB_PASSWORD }}' \

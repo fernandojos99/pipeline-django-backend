@@ -73,7 +73,7 @@ docker-compose down
 
 ---
 
-Pipeline
+# Pipeline
 
 Inside the .github/workflows folder, there is a pipeline that performs the following steps:
 
